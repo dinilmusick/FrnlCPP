@@ -50,6 +50,22 @@ int main() {
   assert(events.invoke("button", "finish", "") == "done");
   assert(late_notifications == 1);
   assert(notifications == 4);
+  // A handler that subscribes during invocation must not receive its own event.
+  frnl::EventDispatcher handler_subscriptions;
+  handler_subscriptions.register_component("dynamic", "ready");
+  handler_subscriptions.define_event("dynamic", "ready", "fire", "subscribe");
+  int handler_added_calls = 0;
+  handler_subscriptions.register_handler("dynamic", "subscribe", [&](const std::string&) {
+    handler_subscriptions.add_listener([&](const std::string&, const std::string&,
+                                           const std::string&, const std::string&) {
+      ++handler_added_calls;
+    });
+    return std::string("ok");
+  });
+  assert(handler_subscriptions.invoke("dynamic", "fire", "") == "ok");
+  assert(handler_added_calls == 0);
+  assert(handler_subscriptions.invoke("dynamic", "fire", "") == "ok");
+  assert(handler_added_calls == 1);
   events.register_handler("button", "thrower", [](const std::string&) -> std::string { throw std::runtime_error("failed"); });
   events.define_event("button", "busy", "fail", "thrower");
   try { events.invoke("button", "fail", ""); assert(false); }

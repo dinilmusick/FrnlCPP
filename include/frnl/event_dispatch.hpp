@@ -57,7 +57,10 @@ class EventDispatcher {
     if (handler == component.handlers.end())
       throw std::invalid_argument("missing handler: " + definition->second);
     const auto result = handler->second(payload);
-    for (const auto& listener : listeners_) listener(id, event, payload, result);
+    // Snapshot before callbacks: a listener may register another listener.
+    // Mutating listeners_ while iterating it would invalidate iterators.
+    const auto listeners = listeners_;
+    for (const auto& listener : listeners) listener(id, event, payload, result);
     return result;
   }
  private:

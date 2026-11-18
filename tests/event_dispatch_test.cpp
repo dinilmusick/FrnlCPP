@@ -1,4 +1,7 @@
 #include "frnl/event_dispatch.hpp"
+#ifdef NDEBUG
+#undef NDEBUG // Regression assertions must execute in Release builds too.
+#endif
 #include <cassert>
 #include <functional>
 #include <stdexcept>
@@ -34,8 +37,21 @@ int main() {
   assert(notifications == 2);
   assert(rejects([&] { events.define_event("button", "busy", "finish", "other"); }));
   assert(rejects([&] { events.register_handler("button", "onFinish", [](const std::string&) { return ""; }); }));
+  int late_notifications = 0;
+  events.add_listener([&](const std::string&, const std::string& name,
+                          const std::string&, const std::string&) {
+    if (name == "finish") {
+      events.add_listener([&](const std::string&, const std::string&,
+                              const std::string&, const std::string&) { ++late_notifications; });
+    }
+  });
+  assert(events.invoke("button", "finish", "") == "done");
+  assert(late_notifications == 0); // Registered during dispatch, not retroactive.
+  assert(events.invoke("button", "finish", "") == "done");
+  assert(late_notifications == 1);
+  assert(notifications == 4);
   events.register_handler("button", "thrower", [](const std::string&) -> std::string { throw std::runtime_error("failed"); });
   events.define_event("button", "busy", "fail", "thrower");
   try { events.invoke("button", "fail", ""); assert(false); }
-  catch (const std::runtime_error&) { assert(notifications == 2); }
+  catch (const std::runtime_error&) { assert(notifications == 4); }
 }

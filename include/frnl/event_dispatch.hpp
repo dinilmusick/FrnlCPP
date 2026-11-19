@@ -11,6 +11,12 @@ namespace frnl {
 class EventDispatcher {
  public:
   using Handler = std::function<std::string(const std::string&)>;
+  struct EventContext {
+    const std::string component_id;
+    const std::string state; // Snapshot of the state at dispatch entry.
+    std::function<void(const std::string&)> set_state;
+  };
+  using ContextHandler = std::function<std::string(const std::string&, const EventContext&)>;
   using Listener = std::function<void(const std::string&, const std::string&,
                                       const std::string&, const std::string&)>;
   void register_component(const std::string& id, const std::string& state) {
@@ -31,7 +37,16 @@ class EventDispatcher {
     auto& component = component_at(id);
     require_name(function_id, "function");
     if (!handler) throw std::invalid_argument("empty event handler");
-    if (!component.handlers.emplace(function_id, std::move(handler)).second)
+    if (component.context_handlers.count(function_id) || !component.handlers.emplace(function_id, std::move(handler)).second)
+      throw std::invalid_argument("duplicate event handler: " + function_id);
+  }
+  void register_context_handler(const std::string& id, const std::string& function_id,
+                                ContextHandler handler) {
+    auto& component = component_at(id);
+    require_name(function_id, "function");
+    if (!handler) throw std::invalid_argument("empty event handler");
+    if (component.handlers.count(function_id) ||
+        !component.context_handlers.emplace(function_id, std::move(handler)).second)
       throw std::invalid_argument("duplicate event handler: " + function_id);
   }
   void set_state(const std::string& id, const std::string& state) {
@@ -54,12 +69,16 @@ class EventDispatcher {
     if (definition == state->second.end())
       throw std::invalid_argument("event not defined in active state: " + event);
     auto handler = component.handlers.find(definition->second);
-    if (handler == component.handlers.end())
+    auto context_handler = component.context_handlers.find(definition->second);
+    if (handler == component.handlers.end() && context_handler == component.context_handlers.end())
       throw std::invalid_argument("missing handler: " + definition->second);
+    const EventContext context{id, component.state,
+      [this, id](const std::string& next) { set_state(id, next); }};
     // Capture listeners before executing user code. Both handlers and listeners
     // may subscribe new listeners; subscriptions begin with the next event.
     const auto listeners = listeners_;
-    const auto result = handler->second(payload);
+    const auto result = context_handler != component.context_handlers.end()
+      ? context_handler->second(payload, context) : handler->second(payload);
     for (const auto& listener : listeners) listener(id, event, payload, result);
     return result;
   }
@@ -68,6 +87,7 @@ class EventDispatcher {
     std::string state;
     std::map<std::string, std::map<std::string, std::string>> events;
     std::map<std::string, Handler> handlers;
+    std::map<std::string, ContextHandler> context_handlers;
   };
   static void require_name(const std::string& value, const char* kind) {
     if (value.empty()) throw std::invalid_argument(std::string("empty ") + kind);

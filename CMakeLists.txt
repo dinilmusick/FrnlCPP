@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.13)
 project(frnlcpp_event_dispatch LANGUAGES CXX)
 add_library(frnlcpp_event_dispatch INTERFACE)
 target_include_directories(frnlcpp_event_dispatch INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)

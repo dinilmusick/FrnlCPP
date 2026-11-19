@@ -10,6 +10,13 @@ if(FRNLCPP_SANITIZERS AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
 endif()
 function(frnlcpp_configure_test target)
   target_link_libraries(${target} PRIVATE frnlcpp_event_dispatch)
+  # Release builds define NDEBUG, which disables assert-based regressions.
+  # Explicitly undefine it after configuration flags for every test target.
+  if(MSVC)
+    target_compile_options(${target} PRIVATE /UNDEBUG)
+  else()
+    target_compile_options(${target} PRIVATE -UNDEBUG)
+  endif()
   if(FRNLCPP_STRICT_WARNINGS AND CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
     target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic)
   endif()

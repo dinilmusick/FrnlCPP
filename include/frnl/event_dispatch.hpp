@@ -55,10 +55,17 @@ class EventDispatcher {
       throw std::invalid_argument("undefined component state: " + state);
     component.state = state;
   }
-  void add_listener(Listener listener) {
+  // Subscription handles support explicit host/UI lifecycle disposal.
+  // A removed listener remains in any already captured dispatch snapshot.
+  using SubscriptionId = std::size_t;
+  SubscriptionId subscribe(Listener listener) {
     if (!listener) throw std::invalid_argument("empty event listener");
-    listeners_.push_back(std::move(listener));
+    const auto id = next_subscription_id_++;
+    listeners_.emplace(id, std::move(listener));
+    return id;
   }
+  bool unsubscribe(SubscriptionId id) { return listeners_.erase(id) != 0; }
+  void add_listener(Listener listener) { (void)subscribe(std::move(listener)); }
   std::string invoke(const std::string& id, const std::string& event,
                      const std::string& payload) {
     auto& component = component_at(id);
@@ -79,7 +86,7 @@ class EventDispatcher {
     const auto listeners = listeners_;
     const auto result = context_handler != component.context_handlers.end()
       ? context_handler->second(payload, context) : handler->second(payload);
-    for (const auto& listener : listeners) listener(id, event, payload, result);
+    for (const auto& entry : listeners) entry.second(id, event, payload, result);
     return result;
   }
  private:
@@ -98,6 +105,7 @@ class EventDispatcher {
     return it->second;
   }
   std::map<std::string, Component> components_;
-  std::vector<Listener> listeners_;
+  std::map<SubscriptionId, Listener> listeners_;
+  SubscriptionId next_subscription_id_ = 1;
 };
 } // namespace frnl

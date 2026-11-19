@@ -41,5 +41,13 @@ int main() {
   const std::vector<std::string> expected{
     "first:outer", "first:inner", "second:inner", "late:inner", "second:outer"};
   if (seen != expected) return 2;
+  // Late subscribers persist for later top-level dispatches. They must not
+  // be duplicated by replaying the original callback, and the nested event
+  // must not be triggered again after the one-time registration.
+  if (dispatcher.invoke("component", "outer", "again") != "again:ok") return 3;
+  const std::vector<std::string> expected_after_repeat{
+    "first:outer", "first:inner", "second:inner", "late:inner", "second:outer",
+    "first:outer", "second:outer", "late:outer"};
+  if (seen != expected_after_repeat) return 4;
   return 0;
 }

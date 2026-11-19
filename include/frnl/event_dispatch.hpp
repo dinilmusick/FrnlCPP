@@ -21,7 +21,7 @@ class EventDispatcher {
                                       const std::string&, const std::string&)>;
   void register_component(const std::string& id, const std::string& state) {
     require_name(id, "component"); require_name(state, "state");
-    if (!components_.emplace(id, Component{state, {}, {}}).second)
+    if (!components_.emplace(id, Component{state, {}, {}, {}}).second)
       throw std::invalid_argument("duplicate component: " + id);
   }
   void define_event(const std::string& id, const std::string& state,

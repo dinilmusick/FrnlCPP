@@ -3,12 +3,14 @@
 // Host owns transport/authentication, tick scheduling and endpoint cleanup.
 #include "frontend.hpp"
 #include <any>
+#include <cstdint>
 #include <exception>
 #include <functional>
 #include <iomanip>
 #include <optional>
 #include <sstream>
 #include <string>
+#include <type_traits>
 #include <utility>
 
 namespace frnl {

@@ -1,6 +1,8 @@
 #include <frnl/semantic_runtime.hpp>
 #include <frnl/lifecycle.hpp>
 #include <frnl/event_dispatch.hpp>
+#include <frnl/ui_session.hpp>
+#include <frnl/routing.hpp>
 #include <frnl/resources.hpp>
 #include <cassert>
 int main() {
@@ -18,6 +20,11 @@ int main() {
   assert(lease->load() == 10);
   scope->dispose();
   assert(lease->status() == frnl::ResourceStatus::released);
+  frnl::FrontendApi api(runtime, "consumer");
+  assert(api.inspect().component_count == 1);
+  frnl::Router router;
+  router.add_route({"page", "/page/:name", {}});
+  assert(router.match("/page/home") && router.match("/page/home")->params.at("name") == "home");
   frnl::EventDispatcher legacy;
   legacy.register_component("old", "idle");
 }

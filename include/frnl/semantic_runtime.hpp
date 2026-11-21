@@ -148,6 +148,37 @@ class SemanticRuntime {
   bool has_component(const std::string& id) const noexcept {
     return nodes_.find(id) != nodes_.end();
   }
+  std::vector<std::string> component_ids() const {
+    std::vector<std::string> ids;
+    for (const auto& entry : nodes_) ids.push_back(entry.first);
+    return ids;
+  }
+  const ComponentDefinition& definition(const std::string& id) const {
+    return node(id).definition;
+  }
+  const std::string& parent_id(const std::string& id) const { return node(id).parent; }
+  std::vector<std::string> children_of(const std::string& id) const {
+    (void)node(id);
+    std::vector<std::string> children;
+    for (const auto& entry : nodes_) if (entry.second.parent == id) children.push_back(entry.first);
+    return children;
+  }
+  std::vector<std::string> event_names(const std::string& id) const {
+    std::set<std::string> result;
+    for (const auto& state : node(id).definition.states)
+      for (const auto& event : state.second.events) result.insert(event.first);
+    return {result.begin(), result.end()};
+  }
+  bool event_available(const std::string& id, const std::string& event) const {
+    const auto& n = node(id);
+    const auto& events = n.definition.states.at(n.state).events;
+    const auto it = events.find(event);
+    return it != events.end() && handlers_.count(it->second) != 0;
+  }
+  bool has_theme(const std::string& name) const noexcept {
+    return themes_.count(name) != 0;
+  }
+  bool has_any_theme() const noexcept { return !themes_.empty(); }
   void remove_component(const std::string& id) {
     (void)node(id);
     for (const auto& child : nodes_)

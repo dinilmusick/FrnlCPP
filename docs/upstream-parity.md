@@ -29,13 +29,13 @@
 | src/runtime/dependencies.ts | include/frnl/registry.hpp: DependencyGraph; FlowStep dependencies | Implemented: capability provider lookup, missing dependency diagnostics, deterministic topological order and cycle rejection | tests/registry_test.cpp, tests/semantic_runtime_test.cpp |
 | src/runtime/validation.ts | register_component / register_flow preconditions; diagnostics | Partial: native fail-fast validation and missing handler diagnostics; no Zod parity | tests/semantic_runtime_test.cpp |
 | src/runtime/resources.ts | include/frnl/resources.hpp: Scope, ResourceController, ResourceContext, ResourceStatus | Native synchronous acquire/release, cancellation, nested scope disposal, retry and exception recovery; host must orchestrate asynchronous work | tests/resources_test.cpp, tests/consumer/main.cpp |
-| src/runtime/routing.ts | — | Missing | — |
-| src/runtime/accessibility.ts | ComponentDefinition presentation_role/presentation_label | Partial metadata only, no accessibility resolution engine | tests/consumer/main.cpp |
-| src/runtime/presentation.ts | ComponentDefinition presentation metadata, Update | Partial metadata and renderer-neutral notifications only | tests/semantic_runtime_test.cpp |
-| src/runtime/frontend-api.ts | — | Missing: complete facade methods | — |
-| src/runtime/facade.ts | — | Missing | — |
-| src/runtime/measurement.ts | — | Missing: geometry and measurement adapters | — |
-| src/runtime/ui-session.ts | — | Missing: UI session abstraction | — |
+| src/runtime/routing.ts | include/frnl/routing.hpp: Router, RouteMatch, match_route, build_route_url | Native route matching, wildcard/parameter captures, strict URL build, percent decoding and synchronous host loader; no browser or JS Promise | tests/routing_test.cpp |
+| src/runtime/accessibility.ts | include/frnl/presentation.hpp: AccessibilityContract, validate_accessibility | Name, required attributes, expected role and focus restrictions | tests/presentation_session_test.cpp |
+| src/runtime/presentation.ts | include/frnl/presentation.hpp: resolve_presentation, Presentation | State/property fallback rules and renderer-neutral presentation flags; concrete widgets remain Floks | tests/presentation_session_test.cpp |
+| src/runtime/frontend-api.ts | include/frnl/frontend.hpp: FrontendApi, ComponentSnapshot, FrontendSnapshot | Native introspection, tree, controls, invoke, subscribe/dispose; no browser-global installation | tests/presentation_session_test.cpp, tests/consumer/main.cpp |
+| src/runtime/facade.ts | semantic_runtime.hpp and frontend.hpp | Headless facade access to state/events, library, themes and inspection; no JS Zustand binding | tests/semantic_runtime_test.cpp, tests/presentation_session_test.cpp |
+| src/runtime/measurement.ts | include/frnl/presentation.hpp: Geometry, RealizedState, MeasurementPort | Renderer-neutral geometry/visibility port; adapter absence fails closed; DOM-specific measurement excluded | tests/presentation_session_test.cpp |
+| src/runtime/ui-session.ts | include/frnl/ui_session.hpp: UiSession, UiCommand, UiCompletion | Host-controlled ticks/transport, snapshot revision validation and deny-by-default event action policy; HTTP, timers, credentials and worker scheduling owned externally | tests/presentation_session_test.cpp |
 | src/react/* and React hooks | — | Deliberately omitted: renderer-neutral native project, no fake React | — |
 | packages/cli/* and packages/validate/* | CMake/CTest + static native validators | Partial: no source generators or JS/TS validators | CMakeLists.txt, CI |
 
@@ -66,3 +66,14 @@
 - Cancellation can occur reentrantly during acquisition; released controllers cannot be loaded again; resource cleanup is idempotent. Scope destruction is no-throw and explicit dispose propagates the first cleanup error after attempting all children and resources.
 - `Fault` retains code, recoverable/retryable flags and a `std::exception_ptr` cause; effect/command types are portable and do not spawn agents, threads, or services.
 - Negative fixtures: tests/resources_test.cpp; external install/link verification: tests/consumer/main.cpp.
+
+## Presentation/session continuation
+
+PR #8 adds a native frontend inspector and host-driven session contract to the existing semantic runtime. No renderer, HTTP client, browser API, or autonomous timer is created.
+
+- A configured measurement port is authoritative about realized presence; absent measurement is unmounted and invisible (not actionable). Geometry rejects non-finite and negative sizes.
+- Frontend snapshots enumerate registered components, ancestry, active state, supported events, control availability, inherited visuals and semantic presentation. Host callbacks consume the same registered runtime.
+- Session `tick()` is explicitly initiated by the embedding application; a revision is recomputed for semantic/realization changes, and commands are rejected if stale, non-event, hidden, disabled, loading or not explicitly permitted by the host policy. No automatic network polling occurs.
+- Routing is pure and URL-based, with strict build options and synchronous host loader. Browser-native URL/Unicode edge semantics are not implied to be identical where untested.
+- Tests: `tests/presentation_session_test.cpp`, `tests/routing_test.cpp`, installed `tests/consumer/main.cpp`.
+- Remaining intentional exclusions: React hooks/DOM adapters, TypeScript codegen/CLI, browser-specific globals and asynchronous Promise scheduler. These are not native renderer-neutral obligations.

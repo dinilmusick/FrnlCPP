@@ -10,6 +10,11 @@ A **renderer-neutral C++17 semantic frontend kernel** based on the FrnlTS contra
 - `<frnl/input_adapters.hpp>`: external host input binding, transformation and validation into semantic dispatch.
 - `<frnl/slots.hpp>`: slot occupants and repeatable collections with their own property/state event boundary.
 - `<frnl/event_dispatch.hpp>`: the original event dispatcher and existing reentrancy regressions.
+- `<frnl/fault.hpp>` and `<frnl/resources.hpp>`: structured faults and commands, resource controller states, cancellation, nested scope-owned RAII release and host-supplied effects.
+- `<frnl/presentation.hpp>`: semantic presentation and accessibility validation plus native measurement-port types.
+- `<frnl/frontend.hpp>`: component-tree inspection, event controls, frontend snapshots and disposable subscriptions.
+- `<frnl/ui_session.hpp>`: host-ticked UI session with revision-based stale-command rejection, explicit allowAction policy and no implicit networking.
+- `<frnl/routing.hpp>`: pure route matching, dynamic segments, wildcards, query parsing and strict URL construction.
 
 The project is header-only. It uses only the C++ standard library and has no required graphics, browser, Qt, SDL, KrnlCPP, SkipoCPP, FloksCPP or GutCPP runtime dependency.
 
@@ -59,10 +64,10 @@ runtime.register_handler("on_click",
 const auto value = std::any_cast<std::string>(runtime.invoke("button", "click"));
 ```
 
-In an embedding application, hold a `SemanticRuntime` for the lifetime of its `InputAdapter` and `SlotModel`; the latter do not own the runtime. `Subscription` and lifecycle tokens may outlive the emitter safely.
+In an embedding application, hold a `SemanticRuntime` for the lifetime of its `InputAdapter`, `SlotModel` and `FrontendApi`; those adapters do not own the runtime. A `UiSession` must not outlive its `FrontendApi`. `Scope` owns scoped resource controllers and releases them even when the scope is destroyed. `Subscription` and lifecycle tokens may outlive the emitter safely. `Subscription` and lifecycle tokens may outlive the emitter safely.
 
 ## Portability and parity
 
-The semantic core has no graphics backend. HostPorts delegates the UI thread scheduler, monotonic clock and persistence to the application; device adapters and AI-driven natural language interpretation remain external. **Do not equate this kernel with complete FrnlTS source export parity**: asynchronous resources, measurement, entire frontend facade, UI sessions, TypeScript CLI and specialized React hooks are not included.
+The semantic core has no graphics backend. HostPorts delegates the UI thread scheduler, monotonic clock and persistence to the application; device adapters and AI-driven natural language interpretation remain external. **Do not equate this kernel with complete FrnlTS source export parity**: native resource acquisition and UI sessions are host-driven; JavaScript Promise scheduling, the browser DOM measurement adapter, JavaScript global installation, TypeScript CLI, React hooks and browser-specific utilities are intentionally not included. Native renderer adapters supply geometry and event loops explicitly.
 
 See [docs/upstream-parity.md](docs/upstream-parity.md) for pinned authoritative revisions, implementation mapping, exact fixtures and known gaps.

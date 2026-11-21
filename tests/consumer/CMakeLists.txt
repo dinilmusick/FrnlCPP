@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.13)
+project(FrnlCPPExternalConsumer LANGUAGES CXX)
+find_package(FrnlCPP CONFIG REQUIRED)
+add_executable(frnlcpp_consumer main.cpp)
+target_link_libraries(frnlcpp_consumer PRIVATE FrnlCPP::semantic)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(frnlcpp_consumer PRIVATE -Wall -Wextra -Wpedantic -Werror)
+endif()

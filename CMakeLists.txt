@@ -86,3 +86,55 @@ if(BUILD_TESTING)
   frnlcpp_configure_test(frnlcpp_listener_growth_nested_dispatch_test)
   add_test(NAME frnlcpp_listener_growth_nested_dispatch_test COMMAND frnlcpp_listener_growth_nested_dispatch_test)
 endif()
+
+# Renderer-independent FrnlCPP semantic runtime, installed C++17 consumer package.
+include(GNUInstallDirs)
+add_library(frnlcpp_semantic INTERFACE)
+add_library(FrnlCPP::semantic ALIAS frnlcpp_semantic)
+set_target_properties(frnlcpp_semantic PROPERTIES EXPORT_NAME semantic)
+target_compile_features(frnlcpp_semantic INTERFACE cxx_std_17)
+target_include_directories(frnlcpp_semantic INTERFACE
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+install(TARGETS frnlcpp_semantic EXPORT FrnlCPPTargets)
+install(DIRECTORY include/frnl DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(EXPORT FrnlCPPTargets
+  FILE FrnlCPPTargets.cmake
+  NAMESPACE FrnlCPP::
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/FrnlCPP)
+install(FILES cmake/FrnlCPPConfig.cmake
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/FrnlCPP)
+if(BUILD_TESTING)
+  add_executable(frnlcpp_semantic_runtime_test tests/semantic_runtime_test.cpp)
+  frnlcpp_configure_test(frnlcpp_semantic_runtime_test)
+  target_link_libraries(frnlcpp_semantic_runtime_test PRIVATE frnlcpp_semantic)
+  add_test(NAME frnlcpp_semantic_runtime_test COMMAND frnlcpp_semantic_runtime_test)
+  add_executable(frnlcpp_lifecycle_test tests/lifecycle_test.cpp)
+  frnlcpp_configure_test(frnlcpp_lifecycle_test)
+  target_link_libraries(frnlcpp_lifecycle_test PRIVATE frnlcpp_semantic)
+  add_test(NAME frnlcpp_lifecycle_test COMMAND frnlcpp_lifecycle_test)
+endif()
+
+if(BUILD_TESTING)
+  add_executable(frnlcpp_listener_registration_before_nested_dispatch_test tests/listener_registration_before_nested_dispatch_test.cpp)
+  frnlcpp_configure_test(frnlcpp_listener_registration_before_nested_dispatch_test)
+  add_test(NAME frnlcpp_listener_registration_before_nested_dispatch_test COMMAND frnlcpp_listener_registration_before_nested_dispatch_test)
+endif()
+
+if(BUILD_TESTING)
+  add_executable(frnlcpp_registry_test tests/registry_test.cpp)
+  frnlcpp_configure_test(frnlcpp_registry_test)
+  target_link_libraries(frnlcpp_registry_test PRIVATE frnlcpp_semantic)
+  add_test(NAME frnlcpp_registry_test COMMAND frnlcpp_registry_test)
+  add_executable(frnlcpp_input_adapters_test tests/input_adapters_test.cpp)
+  frnlcpp_configure_test(frnlcpp_input_adapters_test)
+  target_link_libraries(frnlcpp_input_adapters_test PRIVATE frnlcpp_semantic)
+  add_test(NAME frnlcpp_input_adapters_test COMMAND frnlcpp_input_adapters_test)
+endif()
+
+if(BUILD_TESTING)
+  add_executable(frnlcpp_slots_test tests/slots_test.cpp)
+  frnlcpp_configure_test(frnlcpp_slots_test)
+  target_link_libraries(frnlcpp_slots_test PRIVATE frnlcpp_semantic)
+  add_test(NAME frnlcpp_slots_test COMMAND frnlcpp_slots_test)
+endif()

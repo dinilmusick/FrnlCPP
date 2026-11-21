@@ -5,6 +5,7 @@
 #include <any>
 #include <cmath>
 #include <cstdint>
+#include <exception>
 #include <functional>
 #include <map>
 #include <memory>
@@ -137,7 +138,8 @@ class SemanticRuntime {
       }
     }
     nodes_.emplace(std::move(id), Node{std::move(parent), std::move(definition),
-                                     std::move(initial_state)});
+                                     std::move(initial_state), Phase::sustain,
+                                     0.0, {}, {}, {}, {}, {}});
   }
 
   bool has_component(const std::string& id) const noexcept {

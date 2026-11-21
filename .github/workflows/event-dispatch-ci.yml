@@ -11,21 +11,44 @@ jobs:
       fail-fast: false
       matrix:
         configuration: [Debug, Release]
+        compiler: [g++, clang++]
     steps:
       - uses: actions/checkout@v4
       - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DBUILD_TESTING=ON
+        run: cmake -S . -B build -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DBUILD_TESTING=ON
       - name: Build
         run: cmake --build build --parallel 2
       - name: Run CTest
         run: ctest --test-dir build --output-on-failure
   sanitizers:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++, clang++]
     steps:
       - uses: actions/checkout@v4
       - name: Configure with ASan and UBSan
-        run: cmake -S . -B build-sanitize -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
+        run: cmake -S . -B build-sanitize -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON -DFRNLCPP_SANITIZERS=ON
       - name: Build
         run: cmake --build build-sanitize --parallel 2
       - name: Run CTest
         run: ctest --test-dir build-sanitize --output-on-failure
+
+  installed-consumer:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++, clang++]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install FrnlCPP package
+        run: |
+          cmake -S . -B build-install -DBUILD_TESTING=OFF -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} -DCMAKE_INSTALL_PREFIX="$PWD/prefix"
+          cmake --install build-install
+      - name: Build and execute independent installed consumer
+        run: |
+          cmake -S tests/consumer -B build-consumer -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} -DCMAKE_PREFIX_PATH="$PWD/prefix"
+          cmake --build build-consumer
+          ./build-consumer/frnlcpp_consumer

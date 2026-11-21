@@ -20,12 +20,12 @@ struct Contract {
 struct Capability {
   std::string id;
   unsigned version = 0;
-  std::vector<std::string> provides, requires;
+  std::vector<std::string> provides, requires_caps;
 };
 struct DependencyNode {
   std::string id;
   unsigned version = 1;
-  std::vector<std::string> requires, provides;
+  std::vector<std::string> requires_caps, provides;
 };
 class DependencyGraph {
  public:
@@ -35,7 +35,7 @@ class DependencyGraph {
     if (nodes_.count(node.id)) throw std::invalid_argument("duplicate dependency node: " + node.id);
     for (const auto& key : node.provides)
       if (key.empty()) throw std::invalid_argument("empty provided capability");
-    for (const auto& key : node.requires)
+    for (const auto& key : node.requires_caps)
       if (key.empty()) throw std::invalid_argument("empty required capability");
     const std::string id = node.id;
     nodes_.emplace(id, std::move(node));
@@ -51,7 +51,7 @@ class DependencyGraph {
   std::vector<std::string> validate() const {
     std::vector<std::string> issues;
     for (const auto& node : nodes_)
-      for (const auto& key : node.second.requires)
+      for (const auto& key : node.second.requires_caps)
         if (!resolve_dependency(key))
           issues.push_back(node.first + " requires missing dependency " + key);
     return issues;
@@ -64,7 +64,7 @@ class DependencyGraph {
       if (marks[id] == 2) return;
       marks[id] = 1;
       const auto& node = nodes_.at(id);
-      for (const auto& needed : node.requires) {
+      for (const auto& needed : node.requires_caps) {
         const auto provider = resolve_dependency(needed);
         if (provider) visit(*provider);
       }
@@ -119,7 +119,7 @@ class Registry {
         if (!available.count(name))
           throw std::invalid_argument("missing capability: " + name);
     for (const auto& cap : entry.capabilities)
-      for (const auto& name : cap.requires)
+      for (const auto& name : cap.requires_caps)
         if (!available.count(name))
           throw std::invalid_argument("missing capability: " + name);
   }
@@ -130,9 +130,9 @@ class Registry {
       node.id = registration.first;
       node.version = registration.second.version;
       if (registration.second.contract)
-        node.requires = registration.second.contract->capabilities;
+        node.requires_caps = registration.second.contract->capabilities;
       for (const auto& cap : registration.second.capabilities) {
-        node.requires.insert(node.requires.end(), cap.requires.begin(), cap.requires.end());
+        node.requires_caps.insert(node.requires_caps.end(), cap.requires_caps.begin(), cap.requires_caps.end());
         node.provides.insert(node.provides.end(), cap.provides.begin(), cap.provides.end());
       }
       result.register_node(std::move(node));

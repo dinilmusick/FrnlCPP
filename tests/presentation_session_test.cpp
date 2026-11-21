@@ -88,6 +88,12 @@ int main() {
   },[](const ComponentSnapshot&, const std::string&){return true;});
   assert(stale.tick() && !stale.pending_completion()->succeeded && click_count==2);
   visible=true;
+  UiSession policy_race(api, [&](const FrontendSnapshot&,const std::string& revision,
+                                 const std::optional<UiCompletion>&) {
+    return std::optional<UiCommand>{UiCommand{"policy-race",revision,"button","click",6}};
+  },[&](const ComponentSnapshot&,const std::string&) { visible=false; return true; });
+  assert(policy_race.tick() && !policy_race.pending_completion()->succeeded && click_count==2);
+  visible=true;
   UiSession disabled(api, [&](const FrontendSnapshot&,const std::string& revision,
                               const std::optional<UiCompletion>&) {
     return std::optional<UiCommand>{UiCommand{"disabled",revision,"button","setState",std::string("disabled")}};

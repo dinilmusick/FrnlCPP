@@ -1,6 +1,7 @@
 #pragma once
 // Headless frontend inspection and controls. Renderer measurements remain host-owned.
 #include "presentation.hpp"
+#include "fault.hpp"
 #include <any>
 #include <functional>
 #include <map>

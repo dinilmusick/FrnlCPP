@@ -83,8 +83,9 @@ inline std::pair<std::string, std::map<std::string, std::string>>
 parse_route_url(std::string url) {
   const auto scheme = url.find("://");
   if (scheme != std::string::npos) {
-    const auto slash = url.find('/', scheme + 3);
-    url = slash == std::string::npos ? "/" : url.substr(slash);
+    const auto boundary = url.find_first_of("/?#", scheme + 3);
+    if (boundary == std::string::npos) url = "/";
+    else url = url[boundary] == '/' ? url.substr(boundary) : "/" + url.substr(boundary);
   }
   const auto hash = url.find('#');
   if (hash != std::string::npos) url.resize(hash);

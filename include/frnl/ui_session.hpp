@@ -116,6 +116,9 @@ class UiSession {
             component.presentation.loading || !allowed_ ||
             !allowed_(component, command->control_id))
           return true;
+        // Authorization policies and host measurements may themselves mutate UI state.
+        // Fence once more before invoking any externally supplied action.
+        if (snapshot_fingerprint(api_.inspect()) != before) return true;
         try {
           (void)api_.invoke(command->component_id, command->control_id, command->payload);
           completion_->succeeded = true;

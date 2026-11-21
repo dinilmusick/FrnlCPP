@@ -17,7 +17,7 @@
 | FrnlTS source at pinned SHA | Native API / implementation | Contract coverage | Fixture |
 | --- | --- | --- | --- |
 | src/runtime/core.ts (LifecyclePhase, canTransition, createLifecycle) | include/frnl/lifecycle.hpp: LifecyclePhase, can_transition, Lifecycle, LifecycleSubscription | Implemented: nine phases, legal edges, no-op self-transition, RAII snapshot listeners | tests/lifecycle_test.cpp |
-| src/runtime/core.ts (contracts, capabilities, fault, registry helpers) | — | Missing: typed contracts, capabilities, structured faults | — |
+| src/runtime/core.ts (contracts, capabilities, fault, registry helpers) | include/frnl/fault.hpp: Fault, Command; include/frnl/resources.hpp: Effect; include/frnl/registry.hpp: Contract, Capability | Native core fault metadata, typed command/effect, versioned registry; host-driven effects only | tests/resources_test.cpp, tests/registry_test.cpp |
 | src/runtime/component-definition.ts | semantic_runtime.hpp: ComponentDefinition, StateDefinition, PhaseDurations, register_component | Partial: identity, named states, semantic event mapping and phase durations; no Zod schema | tests/semantic_runtime_test.cpp |
 | src/runtime/events.ts | event_dispatch.hpp: EventDispatcher; semantic_runtime.hpp: invoke, semantic_input, on_event | Partial: state-scoped resolution, nested/reentrant listener snapshots, legacy handlers, scoped invocation; no schema-backed payloads | tests/event_dispatch_test.cpp, tests/listener_growth_nested_dispatch_test.cpp, tests/semantic_runtime_test.cpp |
 | src/runtime/store.ts | semantic_runtime.hpp: component tree, local/page data, properties and state; slots.hpp: SlotModel | Implemented headless slot occupant, properties, repeatable collection changes and occupant state observation; no Zustand store | tests/semantic_runtime_test.cpp, tests/slots_test.cpp |
@@ -28,7 +28,7 @@
 | src/runtime/registry.ts | include/frnl/registry.hpp: Registry, Contract, Capability | Implemented core: versioned entries, downgrade rejection, typed resolve, capability requirements; no JS dynamic registry objects | tests/registry_test.cpp |
 | src/runtime/dependencies.ts | include/frnl/registry.hpp: DependencyGraph; FlowStep dependencies | Implemented: capability provider lookup, missing dependency diagnostics, deterministic topological order and cycle rejection | tests/registry_test.cpp, tests/semantic_runtime_test.cpp |
 | src/runtime/validation.ts | register_component / register_flow preconditions; diagnostics | Partial: native fail-fast validation and missing handler diagnostics; no Zod parity | tests/semantic_runtime_test.cpp |
-| src/runtime/resources.ts | — | Missing | — |
+| src/runtime/resources.ts | include/frnl/resources.hpp: Scope, ResourceController, ResourceContext, ResourceStatus | Native synchronous acquire/release, cancellation, nested scope disposal, retry and exception recovery; host must orchestrate asynchronous work | tests/resources_test.cpp, tests/consumer/main.cpp |
 | src/runtime/routing.ts | — | Missing | — |
 | src/runtime/accessibility.ts | ComponentDefinition presentation_role/presentation_label | Partial metadata only, no accessibility resolution engine | tests/consumer/main.cpp |
 | src/runtime/presentation.ts | ComponentDefinition presentation metadata, Update | Partial metadata and renderer-neutral notifications only | tests/semantic_runtime_test.cpp |
@@ -59,3 +59,10 @@
 - PRs #1 and #3 remain independent competing branches; do not force-push or overwrite them.
 - The library is not fully source-parity-complete while the missing rows above remain. Do not mark the global C++ parity goal complete solely on this PR.
 - Additional fixtures: tests/registry_test.cpp, tests/input_adapters_test.cpp, tests/slots_test.cpp. The external input/slot adapters hold references to SemanticRuntime, so the embedding host must destroy these adapters before the underlying runtime.
+
+## Resource/fault continuation
+
+- PR #7 implements synchronous native resource ownership and deterministic child-scope teardown. This deliberately does **not** claim to replicate JS Promise/AbortController scheduling: native host adapters provide asynchronous execution if required.
+- Cancellation can occur reentrantly during acquisition; released controllers cannot be loaded again; resource cleanup is idempotent. Scope destruction is no-throw and explicit dispose propagates the first cleanup error after attempting all children and resources.
+- `Fault` retains code, recoverable/retryable flags and a `std::exception_ptr` cause; effect/command types are portable and do not spawn agents, threads, or services.
+- Negative fixtures: tests/resources_test.cpp; external install/link verification: tests/consumer/main.cpp.

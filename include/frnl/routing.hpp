@@ -93,15 +93,18 @@ parse_route_url(std::string url) {
   std::string path = qmark == std::string::npos ? url : url.substr(0, qmark);
   if (path.empty()) path = "/";
   std::map<std::string, std::string> params;
-  for (const auto& pair : route_segments([&] {
-    std::replace(query.begin(), query.end(), '&', '/');
-    return query;
-  }())) {
-    if (pair.empty()) continue;
-    const auto equal = pair.find('=');
-    const auto key = uri_decode(pair.substr(0, equal), true);
-    const auto val = equal == std::string::npos ? "" : uri_decode(pair.substr(equal + 1), true);
-    params[key] = val;
+  std::size_t offset = 0;
+  while (offset < query.size()) {
+    const auto amp = query.find('&', offset);
+    const auto pair = query.substr(offset, amp == std::string::npos ? std::string::npos : amp - offset);
+    if (!pair.empty()) {
+      const auto equal = pair.find('=');
+      const auto key = uri_decode(pair.substr(0, equal), true);
+      const auto val = equal == std::string::npos ? "" : uri_decode(pair.substr(equal + 1), true);
+      params[key] = val;
+    }
+    if (amp == std::string::npos) break;
+    offset = amp + 1;
   }
   return {path, params};
 }
@@ -142,9 +145,10 @@ inline std::string build_route_url(
     std::map<std::string, std::string> query = {}, RouteBuildOptions options = {}) {
   const auto parts = route_segments(normalize_route_pattern(route.pattern));
   std::set<std::string> consumed;
-  std::string output;
-  for (const auto& part : parts) {
-    if (!output.empty()) output += '/';
+  std::string output = "/";
+  for (std::size_t part_index = 1; part_index < parts.size(); ++part_index) {
+    const auto& part = parts[part_index];
+    if (part_index > 1) output += '/';
     if (!part.empty() && part.front() == ':') {
       const auto name = part.substr(1);
       const auto p = params.find(name);
@@ -191,11 +195,12 @@ class Router {
     route.pattern = pattern;
     routes_.emplace(id, std::move(route));
     patterns_.insert(pattern);
+    order_.push_back(id);
   }
   const Route& route(const std::string& id) const { return routes_.at(id); }
   std::optional<RouteMatch> match(const std::string& url) const {
-    for (const auto& route : routes_) {
-      const auto result = match_route(route.second, url);
+    for (const auto& id : order_) {
+      const auto result = match_route(routes_.at(id), url);
       if (result) return result;
     }
     return std::nullopt;
@@ -206,9 +211,10 @@ class Router {
     const auto& found = route(result->id);
     return {result, found.load ? found.load() : std::any{}};
   }
-  void clear() noexcept { routes_.clear(); patterns_.clear(); }
+  void clear() noexcept { routes_.clear(); patterns_.clear(); order_.clear(); }
  private:
   std::map<std::string, Route> routes_;
   std::set<std::string> patterns_;
+  std::vector<std::string> order_;
 };
 } // namespace frnl

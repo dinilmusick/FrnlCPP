@@ -31,6 +31,13 @@ int main() {
   root.states["idle"] = {};
   runtime.register_component("root", root, "idle");
   runtime.register_component("button", button_definition(), "idle", "root");
+  auto incoming = button_definition();
+  incoming.states["active"].phases.attack_seconds = 1.0;
+  runtime.register_component("entering", incoming, "active", "root");
+  assert(runtime.current_phase("entering") == Phase::attack);
+  runtime.advance("entering", 1.0);
+  assert(runtime.current_phase("entering") == Phase::sustain);
+  runtime.remove_component("entering");
   assert((runtime.component_path("button") == std::vector<std::string>{"root", "button"}));
   assert(runtime.component_at_path({"root", "button"}) == "button");
   rejects([&]{ runtime.component_at_path({"button"}); });

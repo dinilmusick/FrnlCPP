@@ -91,6 +91,7 @@ endif()
 include(GNUInstallDirs)
 add_library(frnlcpp_semantic INTERFACE)
 add_library(FrnlCPP::semantic ALIAS frnlcpp_semantic)
+set_target_properties(frnlcpp_semantic PROPERTIES EXPORT_NAME semantic)
 target_compile_features(frnlcpp_semantic INTERFACE cxx_std_17)
 target_include_directories(frnlcpp_semantic INTERFACE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

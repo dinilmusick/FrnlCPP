@@ -137,8 +137,11 @@ class SemanticRuntime {
         require(event.first, "event"); require(event.second, "function ID");
       }
     }
+    const Phase initial_phase =
+        definition.states.at(initial_state).phases.attack_seconds > 0.0
+            ? Phase::attack : Phase::sustain;
     nodes_.emplace(std::move(id), Node{std::move(parent), std::move(definition),
-                                     std::move(initial_state), Phase::sustain,
+                                     std::move(initial_state), initial_phase,
                                      0.0, {}, {}, {}, {}, {}});
   }
 

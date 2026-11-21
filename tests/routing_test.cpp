@@ -30,6 +30,8 @@ int main() {
   auto root=router.match("/");
   assert(root && root->id=="root");
   assert(build_route_url(router.route("root"))=="/");
+  auto absolute_root = match_route(router.route("root"), "https://example.invalid?query=x+y");
+  assert(absolute_root && absolute_root->query.at("query") == "x y");
   router.clear();
   assert(!router.match("/users/x"));
 }

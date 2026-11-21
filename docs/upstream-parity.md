@@ -20,13 +20,13 @@
 | src/runtime/core.ts (contracts, capabilities, fault, registry helpers) | — | Missing: typed contracts, capabilities, structured faults | — |
 | src/runtime/component-definition.ts | semantic_runtime.hpp: ComponentDefinition, StateDefinition, PhaseDurations, register_component | Partial: identity, named states, semantic event mapping and phase durations; no Zod schema | tests/semantic_runtime_test.cpp |
 | src/runtime/events.ts | event_dispatch.hpp: EventDispatcher; semantic_runtime.hpp: invoke, semantic_input, on_event | Partial: state-scoped resolution, nested/reentrant listener snapshots, legacy handlers, scoped invocation; no schema-backed payloads | tests/event_dispatch_test.cpp, tests/listener_growth_nested_dispatch_test.cpp, tests/semantic_runtime_test.cpp |
-| src/runtime/store.ts | semantic_runtime.hpp: component tree, local/page data, properties, current state and visual overrides | Partial: no Zustand store, slot occupants or collection model | tests/semantic_runtime_test.cpp |
+| src/runtime/store.ts | semantic_runtime.hpp: component tree, local/page data, properties and state; slots.hpp: SlotModel | Implemented headless slot occupant, properties, repeatable collection changes and occupant state observation; no Zustand store | tests/semantic_runtime_test.cpp, tests/slots_test.cpp |
 | src/runtime/themes.ts | semantic_runtime.hpp: register_theme, apply_theme, clear_theme, visual_parameters | Partial: state/definition theme map, inherited nearest ancestor, override precedence | tests/semantic_runtime_test.cpp |
 | src/runtime/orchestration.ts | semantic_runtime.hpp: register_flow, execute_flow, FlowStep | Partial: deterministic acyclic dependency ordering, callbacks, nested-error context; no asynchronous orchestration engine | tests/semantic_runtime_test.cpp |
 | src/runtime/libraries.ts | semantic_runtime.hpp: register_library, call_library | Partial: host function injection without library lifecycle/namespace policies | tests/semantic_runtime_test.cpp |
-| src/runtime/semantic-input.ts | semantic_runtime.hpp: semantic_input | Partial: external input enters same state-scoped event boundary; device adapters are host-provided | tests/semantic_runtime_test.cpp |
-| src/runtime/registry.ts | — | Missing: versioned contract/capability registration and graph resolution | — |
-| src/runtime/dependencies.ts | FlowStep dependencies | Partial: flow DAG only, no exported DependencyGraph equivalent | tests/semantic_runtime_test.cpp |
+| src/runtime/semantic-input.ts | semantic_runtime.hpp: semantic_input; input_adapters.hpp: InputAdapter | Partial: input binding, validation and transformation before state event routing; natural-language inference and domain schemas stay with host/GutCPP | tests/semantic_runtime_test.cpp, tests/input_adapters_test.cpp |
+| src/runtime/registry.ts | include/frnl/registry.hpp: Registry, Contract, Capability | Implemented core: versioned entries, downgrade rejection, typed resolve, capability requirements; no JS dynamic registry objects | tests/registry_test.cpp |
+| src/runtime/dependencies.ts | include/frnl/registry.hpp: DependencyGraph; FlowStep dependencies | Implemented: capability provider lookup, missing dependency diagnostics, deterministic topological order and cycle rejection | tests/registry_test.cpp, tests/semantic_runtime_test.cpp |
 | src/runtime/validation.ts | register_component / register_flow preconditions; diagnostics | Partial: native fail-fast validation and missing handler diagnostics; no Zod parity | tests/semantic_runtime_test.cpp |
 | src/runtime/resources.ts | — | Missing | — |
 | src/runtime/routing.ts | — | Missing | — |
@@ -51,10 +51,11 @@
 
 ## Evidence and release gate
 
-- Baseline regression: CMakeLists.txt registered 18 event dispatch tests on main (including listener disposal and nested growth).
+- Baseline regression: CMakeLists.txt registered 18 event dispatch tests on main (including listener disposal and nested growth). PR #3's previously unmerged nested-listener-growth regression has been incorporated into the new branch without altering PR #3.
 - Initial Wave 2 branch compile gate **failed** on GCC 15.2.0 with -Werror=missing-field-initializers for SemanticRuntime::Node; corrected by explicitly initializing all Node fields in a follow-up commit. Do not certify against the failed SHA.
 - Required evidence: GCC and Clang Debug/Release, GCC and Clang AddressSanitizer/UndefinedBehaviorSanitizer, original reentrancy tests, new semantic/lifecycle tests, installed external consumer and exact-head main verification.
 - CI entry point: .github/workflows/event-dispatch-ci.yml.
 - External consumer: tests/consumer, linking exported FrnlCPP::semantic through find_package(FrnlCPP CONFIG REQUIRED).
 - PRs #1 and #3 remain independent competing branches; do not force-push or overwrite them.
 - The library is not fully source-parity-complete while the missing rows above remain. Do not mark the global C++ parity goal complete solely on this PR.
+- Additional fixtures: tests/registry_test.cpp, tests/input_adapters_test.cpp, tests/slots_test.cpp. The external input/slot adapters hold references to SemanticRuntime, so the embedding host must destroy these adapters before the underlying runtime.

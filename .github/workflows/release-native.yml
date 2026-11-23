@@ -1,0 +1,40 @@
+name: Verified native source release
+on:
+  workflow_run:
+    workflows: ["C++ event dispatch regression"]
+    types: [completed]
+permissions:
+  contents: read
+jobs:
+  release:
+    if: >-
+      ${{ github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.event == 'push' &&
+          github.event.workflow_run.head_branch == 'main' &&
+          github.event.workflow_run.head_repository.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require exact SHA verified by CI
+        env:
+          VERIFIED_HEAD: ${{ github.event.workflow_run.head_sha }}
+        run: test "$(git rev-parse HEAD)" = "$VERIFIED_HEAD"
+      - name: Verify CMake build and exported install
+        run: |
+          set -euo pipefail
+          cmake -S . -B "${RUNNER_TEMP}/release-build" -DBUILD_TESTING=OFF
+          cmake --build "${RUNNER_TEMP}/release-build" --parallel 2
+          cmake --install "${RUNNER_TEMP}/release-build" --prefix "${RUNNER_TEMP}/release-install"
+          test -n "$(find "${RUNNER_TEMP}/release-install" -type f -print -quit)"
+      - name: Prepare version PR or tagged GitHub release
+        uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json

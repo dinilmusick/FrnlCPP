@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.13)
-project(frnlcpp_event_dispatch LANGUAGES CXX)
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/version.txt" ULTRST_RELEASE_VERSION LIMIT_COUNT 1)
+project(frnlcpp_event_dispatch VERSION ${ULTRST_RELEASE_VERSION} LANGUAGES CXX)
 add_library(frnlcpp_event_dispatch INTERFACE)
 target_include_directories(frnlcpp_event_dispatch INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_compile_features(frnlcpp_event_dispatch INTERFACE cxx_std_17)
